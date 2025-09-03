@@ -29,39 +29,10 @@
   cd ../
   rosdep install --from-paths src --ignore-src -r -y
   ```
-- build the `epmc_v2_ros_hw_plugin` package with colcon (in the root folder of your ros workspace):
+- build the `epmc_v2_hardware_interface` package with colcon (in the root folder of your ros workspace):
   ```shell
-  colcon build --packages-select epmc_v2_ros_hw_plugin
+  colcon build --packages-select epmc_v2_hardware_interface
   ```
 > [!NOTE]   
-> The **epmc_v2_ros_hw_plugin** package will now be available for use in any project in your ros workspace.
-> You can see example of how the use the `epmc_v2_ros_hw_plugin` in the `example_control_file`
-
-#
-
-#### Sample robot test
- - please chekout the [**`easy_demo_bot`**](https://github.com/robocre8/demo_bot) package to see proper sample of how the EPMC is used.
-
-#
-
-#### Serial port check for the EPMC Module
-- ensure the **`Easy PID Motor Controller (EPMC_v2) Module`**, with the motors connected and fully set up for velocity PID, is connected to the microcomputer or PC via USB.
-
-- check the serial port the driver is connected to:
-  > The best way to select the right serial port (if you are using multiple serial device) is to select by path
-  ```shell
-  ls /dev/serial/by-path
-  ```
-  > you should see a value (if the driver is connected and seen by the computer), your serial port would be -> /dev/serial/by-path/[value]. for more info visit this tutorial from [ArticulatedRobotics](https://www.youtube.com/watch?v=eJZXRncGaGM&list=PLunhqkrRNRhYAffV8JDiFOatQXuU-NnxT&index=8)
-
-  - OR you can also try this:
-  ```shell
-  ls /dev/ttyU*
-  ```
-  > you should see /dev/ttyUSB0 or /dev/ttyUSB1 and so on
-
-- once you have gotten the **port**, update the **port** parameter in the **`<ros2_control>`** tag in the URDF's **`epmc_v2_ros2_control.xacro`**
-
-- you can the build and run your robot.
-
-- Good Luck !!!
+> The **epmc_v2_hardware_interface** package will now be available for use in any project in your ros workspace.
+> You can see example of how the use the `epmc_v2_hardware_interface` in the `example_control_file`
