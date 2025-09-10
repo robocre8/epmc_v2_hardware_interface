@@ -258,11 +258,11 @@ namespace epmc_v2_hardware_interface
     try
     {
       // read wheel pos and velocity data
-      // float pos0, pos1, pos2, pos3;
-      // float v0, v1, v2, v3;
+      float pos0, pos1, pos2, pos3;
+      float v0, v1, v2, v3;
 
-      auto [pos0, pos1, pos2, pos3] = epmcV2_.readPos();
-      auto [v0, v1, v2, v3] = epmcV2_.readVel();
+      epmcV2_.readPos(pos0, pos1, pos2, pos3);
+      epmcV2_.readVel(v0, v1, v2, v3);
 
       if (config_.motor0_wheel_name != ""){
         motor0_.angPos = pos0;
@@ -282,10 +282,10 @@ namespace epmc_v2_hardware_interface
       } 
       if (config_.imu_sensor_name != ""){
         if (imu_.use_imu == 1){
-          // float ax, ay, az;
-          // float gx, gy, gz;
-          auto [ax, ay, az] = epmcV2_.readAcc();
-          auto [gx, gy, gz] = epmcV2_.readGyro();
+          float ax, ay, az;
+          float gx, gy, gz;
+          epmcV2_.readAcc(ax, ay, az);
+          epmcV2_.readGyro(gx, gy, gz);
 
           imu_.ax = ax;
           imu_.ay = ay;
@@ -312,10 +312,7 @@ namespace epmc_v2_hardware_interface
       return hardware_interface::return_type::ERROR;
     }
 
-    float v0 = 0.0;
-    float v1 = 0.0;
-    float v2 = 0.0;
-    float v3 = 0.0;
+    float v0, v1, v2, v3;
     
     if (config_.motor0_wheel_name != ""){
       v0 = (float)motor0_.cmdAngVel;
