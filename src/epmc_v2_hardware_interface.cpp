@@ -261,8 +261,10 @@ namespace epmc_v2_hardware_interface
       float pos0, pos1, pos2, pos3;
       float v0, v1, v2, v3;
 
-      epmcV2_.readPos(pos0, pos1, pos2, pos3);
-      epmcV2_.readVel(v0, v1, v2, v3);
+      // epmcV2_.readPos(pos0, pos1, pos2, pos3);
+      // epmcV2_.readVel(v0, v1, v2, v3);
+
+      epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
 
       if (config_.motor0_wheel_name != ""){
         motor0_.angPos = pos0;
@@ -284,8 +286,9 @@ namespace epmc_v2_hardware_interface
         if (imu_.use_imu == 1){
           float ax, ay, az;
           float gx, gy, gz;
-          epmcV2_.readAcc(ax, ay, az);
-          epmcV2_.readGyro(gx, gy, gz);
+          // epmcV2_.readAcc(ax, ay, az);
+          // epmcV2_.readGyro(gx, gy, gz);
+          epmcV2_.readImuData(ax, ay, az, gx, gy, gz);
 
           imu_.ax = ax;
           imu_.ay = ay;
