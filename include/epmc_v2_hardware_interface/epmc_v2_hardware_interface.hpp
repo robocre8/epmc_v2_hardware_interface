@@ -54,7 +54,7 @@ namespace epmc_v2_hardware_interface
   public:
     RCLCPP_SHARED_PTR_DEFINITIONS(EPMC_V2_HardwareInterface);
 
-    hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareInfo &info) override;
+    hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareComponentInterfaceParams &info) override;
 
     hardware_interface::CallbackReturn on_configure(const rclcpp_lifecycle::State &previous_state) override;
 

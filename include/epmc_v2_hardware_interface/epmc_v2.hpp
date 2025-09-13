@@ -1,11 +1,34 @@
 #ifndef EPMC_V2_HPP
 #define EPMC_V2_HPP
 
-#include <sstream>
-#include <libserial/SerialPort.h>
 #include <iostream>
-
+#include <iomanip>
+#include <vector>
+#include <tuple>
 #include <chrono>
+#include <thread>
+#include <cstring>  // memcpy
+#include <libserial/SerialPort.h>
+
+// Serial Protocol Command IDs -------------
+const uint8_t START_BYTE = 0xAA;
+const uint8_t WRITE_VEL = 0x01;
+const uint8_t WRITE_PWM = 0x02;
+const uint8_t READ_POS = 0x03;
+const uint8_t READ_VEL = 0x04;
+const uint8_t READ_UVEL = 0x05;
+const uint8_t SET_PID_MODE = 0x15;
+const uint8_t GET_PID_MODE = 0x16;
+const uint8_t SET_CMD_TIMEOUT = 0x17;
+const uint8_t GET_CMD_TIMEOUT = 0x18;
+const uint8_t GET_USE_IMU = 0x1D;
+const uint8_t READ_ACC = 0x1E;
+const uint8_t READ_ACC_VAR = 0x21;
+const uint8_t READ_GYRO = 0x24;
+const uint8_t READ_GYRO_VAR = 0x27;
+const uint8_t READ_MOTOR_DATA = 0x2A;
+const uint8_t READ_IMU_DATA = 0x2B;
+//---------------------------------------------
 
 LibSerial::BaudRate convert_baud_rate(int baud_rate)
 {
@@ -32,6 +55,10 @@ LibSerial::BaudRate convert_baud_rate(int baud_rate)
     return LibSerial::BaudRate::BAUD_115200;
   case 230400:
     return LibSerial::BaudRate::BAUD_230400;
+  case 460800:
+    return LibSerial::BaudRate::BAUD_460800;
+  case 921600:
+    return LibSerial::BaudRate::BAUD_921600;
   default:
     std::cout << "Error! Baud rate " << baud_rate << " not supported! Default to 57600" << std::endl;
     return LibSerial::BaudRate::BAUD_57600;
@@ -44,11 +71,19 @@ class EPMC_V2
 public:
   EPMC_V2() = default;
 
-  void connect(const std::string &serial_device, int32_t baud_rate = 115200, int32_t timeout_ms = 100)
+  void connect(const std::string &serial_device, int32_t baud_rate = 921600, int32_t timeout_ms = 100)
   {
-    timeout_ms_ = timeout_ms;
-    serial_conn_.Open(serial_device);
-    serial_conn_.SetBaudRate(convert_baud_rate(baud_rate));
+    try {
+      timeout_ms_ = timeout_ms;
+      serial_conn_.Open(serial_device);
+      serial_conn_.SetBaudRate(convert_baud_rate(baud_rate));
+      serial_conn_.SetCharacterSize(LibSerial::CharacterSize::CHAR_SIZE_8);
+      serial_conn_.SetStopBits(LibSerial::StopBits::STOP_BITS_1);
+      serial_conn_.SetParity(LibSerial::Parity::PARITY_NONE);
+      serial_conn_.SetFlowControl(LibSerial::FlowControl::FLOW_CONTROL_NONE);
+    } catch (const LibSerial::OpenFailed&) {
+        std::cerr << "Failed to open serial port!" << std::endl;
+    }
   }
 
   void disconnect()
@@ -61,154 +96,219 @@ public:
     return serial_conn_.IsOpen();
   }
 
-  float readPos(int motor_no)
+  void readPos(float &pos0, float& pos1, float &pos2, float &pos3)
   {
-    float angPos = get("/pos", motor_no);
-    return angPos;
+    read_data4(READ_POS, pos0, pos1, pos2, pos3);
   }
 
-  float readVel(int motor_no)
+  void readVel(float &v0, float& v1, float &v2, float &v3)
   {
-    float filteredAngVel = get("/vel", motor_no);
-    return filteredAngVel;
+    read_data4(READ_VEL, v0, v1, v2, v3);
   }
 
-  float readUVel(int motor_no)
+  void readUVel(float &v0, float& v1, float &v2, float &v3)
   {
-    float unfilteredAngVel = get("/u-vel", motor_no);
-    return unfilteredAngVel;
+    read_data4(READ_UVEL, v0, v1, v2, v3);
   }
 
-  bool writePWM(int motor_no, int pwm_val)
+  int writePWM(int pwm0, int pwm1, int pwm2, int pwm3)
   {
-    return send("/pwm", motor_no, (float)pwm_val);
+    float res = write_data4(WRITE_PWM, (float)pwm0, (float)pwm1, (float)pwm2, (float)pwm3);
+    return (int)res;
   }
 
-  bool writeSpeed(int motor_no, float speed_rps)
+  int writeSpeed(float v0, float v1, float v2, float v3)
   {
-    return send("/vel", motor_no, speed_rps);
+    float res = write_data4(WRITE_VEL, v0, v1, v2, v3);
+    return (int)res;
   }
 
-  bool setCmdTimeout(int timeout_ms)
+  int setCmdTimeout(int timeout_ms)
   {
-    return send("/timeout", -1, (float)timeout_ms);
+    float res = write_data1(SET_CMD_TIMEOUT, 0, (float)timeout_ms);
+    return (int)res;
   }
 
   int getCmdTimeout()
   {
-    float timeout_ms = get("/timeout", -1);
+    float timeout_ms = read_data1(GET_CMD_TIMEOUT, 0);
     return (int)timeout_ms;
   }
 
-  bool setPidMode(int motor_no, int mode)
+  int setPidMode(int motor_no, int mode)
   {
-    return send("/mode", motor_no, (float)mode);
+    float res = write_data1(SET_PID_MODE, (uint8_t)motor_no, (float)mode);
+    return (int)res;
   }
 
   int getPidMode(int motor_no)
   {
-    float mode = get("/mode", motor_no);
+    float mode = read_data1(GET_PID_MODE, (uint8_t)motor_no);
     return (int)mode;
   }
 
   int getUseIMU()
   {
-    float mode = get("/use-imu", -1);
+    float mode = read_data1(GET_USE_IMU, 0);
     return (int)mode;
   }
 
-  float readAcc(int pos_no)
+  void readAcc(float &x, float &y, float &z)
   {
-    float acc_val = get("/acc", pos_no);
-    return acc_val;
+    read_data3(READ_ACC, x, y, z);
   }
 
-  float readAccVarinace(int pos_no)
+  void readAccVariance(float &x, float &y, float &z)
   {
-    float acc_val = get("/acc-var", pos_no);
-    return acc_val;
+    read_data3(READ_ACC_VAR, x, y, z);
   }
 
-  float readGyro(int pos_no)
+  void readGyro(float &x, float &y, float &z)
   {
-    float gyro_val = get("/gyro", pos_no);
-    return gyro_val;
+    read_data3(READ_GYRO, x, y, z);
   }
 
-  float readGyroVariance(int pos_no)
+  void readGyroVariance(float &x, float &y, float &z)
   {
-    float gyro_val = get("/gyro-var", pos_no);
-    return gyro_val;
+    read_data3(READ_GYRO_VAR, x, y, z);
+  }
+
+  void readMotorData(float &pos0, float& pos1, float &pos2, float &pos3, float &v0, float& v1, float &v2, float &v3)
+  {
+    read_data8(READ_MOTOR_DATA, pos0, pos1, pos2, pos3, v0, v1, v2, v3);
+  }
+
+  void readImuData(float &ax, float &ay, float &az, float &gx, float &gy, float &gz)
+  {
+    read_data6(READ_IMU_DATA, ax, ay, az, gx, gy, gz);
   }
 
 private:
   LibSerial::SerialPort serial_conn_;
   int timeout_ms_;
 
-  std::string send_and_receive(const std::string &msg_cmd)
-  {
-    auto prev_time = std::chrono::system_clock::now();
-    std::chrono::duration<double> duration;
-
-    std::string response = "";
-
-    serial_conn_.FlushIOBuffers(); // Just in case
-
-    while (response == "")
-    {
-      try
-      {
-
-        try
-        {
-          serial_conn_.Write(msg_cmd);
-          serial_conn_.ReadLine(response, '\n', timeout_ms_);
-          duration = (std::chrono::system_clock::now() - prev_time);
-        }
-        catch (const LibSerial::ReadTimeout &)
-        {
-          continue;
-        }
-
-        duration = (std::chrono::system_clock::now() - prev_time);
-        if (duration.count() > 2.0)
-        {
-          throw duration.count();
-        }
-      }
-      catch (double x)
-      {
-        std::cerr << "Error getting response from ESP32, wasted much time \n";
-      }
-    }
-
-    return response;
+  uint8_t calcChecksum(const std::vector<uint8_t>& packet) {
+      uint32_t sum = 0;
+      for (auto b : packet) sum += b;
+      return sum & 0xFF;
   }
 
-  bool send(std::string cmd_route, int pos, float val)
-  {
-    std::stringstream msg_stream;
-    msg_stream << cmd_route << "," << pos << "," << val;
-
-    std::string res = send_and_receive(msg_stream.str());
-
-    int data = std::stoi(res);
-    if (data)
-      return true;
-    else
-      return false;
+  void send_packet_without_payload(uint8_t cmd) {
+      std::vector<uint8_t> packet = {START_BYTE, cmd, 0}; // no payload
+      uint8_t checksum = calcChecksum(packet);
+      packet.push_back(checksum);
+      serial_conn_.Write(packet);
   }
 
-  float get(std::string cmd_route, int pos)
-  {
-    std::stringstream msg_stream;
-    msg_stream << cmd_route << "," << pos;
-
-    std::string res = send_and_receive(msg_stream.str());
-
-    float val = std::atof(res.c_str());
-    return val;
+  void send_packet_with_payload(uint8_t cmd, const std::vector<uint8_t>& payload) {
+      std::vector<uint8_t> packet = {START_BYTE, cmd, (uint8_t)payload.size()};
+      packet.insert(packet.end(), payload.begin(), payload.end());
+      uint8_t checksum = calcChecksum(packet);
+      packet.push_back(checksum);
+      serial_conn_.Write(packet);
   }
+
+  float read_packet1() {
+      std::vector<uint8_t> payload(4);
+      serial_conn_.Read(payload, 4);
+      float val;
+      std::memcpy(&val, payload.data(), sizeof(float)); // little-endian assumed
+      return val;
+  }
+
+  void read_packet3(float &val0, float &val1, float &val2) {
+      std::vector<uint8_t> payload(12);
+      serial_conn_.Read(payload, 12);
+
+      std::memcpy(&val0, payload.data() + 0, sizeof(float));
+      std::memcpy(&val1, payload.data() + 4, sizeof(float));
+      std::memcpy(&val2, payload.data() + 8, sizeof(float));
+  }
+
+  void read_packet4(float &val0, float &val1, float &val2, float &val3) {
+      std::vector<uint8_t> payload(16);
+      serial_conn_.Read(payload, 16);
+
+      std::memcpy(&val0, payload.data() + 0, sizeof(float));
+      std::memcpy(&val1, payload.data() + 4, sizeof(float));
+      std::memcpy(&val2, payload.data() + 8, sizeof(float));
+      std::memcpy(&val3, payload.data() + 12, sizeof(float));
+  }
+
+  void read_packet6(float &val0, float &val1, float &val2, float &val3, float &val4, float &val5) {
+      std::vector<uint8_t> payload(24);
+      serial_conn_.Read(payload, 24);
+
+      std::memcpy(&val0, payload.data() + 0, sizeof(float));
+      std::memcpy(&val1, payload.data() + 4, sizeof(float));
+      std::memcpy(&val2, payload.data() + 8, sizeof(float));
+      std::memcpy(&val3, payload.data() + 12, sizeof(float));
+      std::memcpy(&val4, payload.data() + 16, sizeof(float));
+      std::memcpy(&val5, payload.data() + 20, sizeof(float));
+  }
+
+  void read_packet8(float &val0, float &val1, float &val2, float &val3, float &val4, float &val5, float &val6, float &val7) {
+      std::vector<uint8_t> payload(32);
+      serial_conn_.Read(payload, 32);
+
+      std::memcpy(&val0, payload.data() + 0, sizeof(float));
+      std::memcpy(&val1, payload.data() + 4, sizeof(float));
+      std::memcpy(&val2, payload.data() + 8, sizeof(float));
+      std::memcpy(&val3, payload.data() + 12, sizeof(float));
+      std::memcpy(&val4, payload.data() + 16, sizeof(float));
+      std::memcpy(&val5, payload.data() + 20, sizeof(float));
+      std::memcpy(&val6, payload.data() + 24, sizeof(float));
+      std::memcpy(&val7, payload.data() + 28, sizeof(float));
+  }
+
+  // ------------------- High-Level Wrappers -------------------
+  float write_data1(uint8_t cmd, uint8_t pos, float val) {
+      std::vector<uint8_t> payload(sizeof(uint8_t) + sizeof(float));
+      payload[0] = pos;
+      std::memcpy(&payload[1], &val, sizeof(float));
+      send_packet_with_payload(cmd, payload);
+      return read_packet1();
+  }
+
+  float read_data1(uint8_t cmd, uint8_t pos) {
+      float zero = 0.0f;
+      std::vector<uint8_t> payload(sizeof(uint8_t) + sizeof(float));
+      payload[0] = pos;
+      std::memcpy(&payload[1], &zero, sizeof(float));
+      send_packet_with_payload(cmd, payload);
+      return read_packet1();
+  }
+
+  float write_data4(uint8_t cmd, float a, float b, float c, float d) {
+      std::vector<uint8_t> payload(4 * sizeof(float));
+      std::memcpy(&payload[0],  &a, 4);
+      std::memcpy(&payload[4],  &b, 4);
+      std::memcpy(&payload[8],  &c, 4);
+      std::memcpy(&payload[12], &d, 4);
+      send_packet_with_payload(cmd, payload);
+      return read_packet1();
+  }
+
+  void read_data3(uint8_t cmd, float &a, float &b, float &c) {
+      send_packet_without_payload(cmd);
+      return read_packet3(a, b, c);
+  }
+
+  void read_data4(uint8_t cmd, float &a, float &b, float &c, float &d) {
+      send_packet_without_payload(cmd);
+      return read_packet4(a, b, c, d);
+  }
+
+  void read_data6(uint8_t cmd, float &a, float &b, float &c, float &d, float &e, float &f) {
+      send_packet_without_payload(cmd);
+      return read_packet6(a, b, c, d, e, f);
+  }
+
+  void read_data8(uint8_t cmd, float &a, float &b, float &c, float &d, float &e, float &f, float &g, float &h) {
+      send_packet_without_payload(cmd);
+      return read_packet8(a, b, c, d, e, f, g, h);
+  }
+
 };
 
 #endif

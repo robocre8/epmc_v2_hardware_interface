@@ -10,6 +10,7 @@ class IMU
     public:
 
     std::string name = "";
+    
     double qw = 1.0;
     double qx = 0.0;
     double qy = 0.0;
