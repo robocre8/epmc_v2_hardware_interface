@@ -54,7 +54,7 @@ namespace epmc_v2_hardware_interface
   public:
     RCLCPP_SHARED_PTR_DEFINITIONS(EPMC_V2_HardwareInterface);
 
-    hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareComponentInterfaceParams &info) override;
+    hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareInfo &info) override;
 
     hardware_interface::CallbackReturn on_configure(const rclcpp_lifecycle::State &previous_state) override;
 
@@ -74,11 +74,11 @@ namespace epmc_v2_hardware_interface
 
   private:
     EPMC_V2 epmcV2_; // serial communication
-    Config config_;        // configuration
-    Motor motor0_;      // motor0 setup
-    Motor motor1_;      // motor1 setup
-    Motor motor2_;      // motor2 setup
-    Motor motor3_;      // motor3 setup
+    Config config_;  // configuration
+    Motor motor0_;   // motor0 setup
+    Motor motor1_;   // motor1 setup
+    Motor motor2_;   // motor2 setup
+    Motor motor3_;   // motor3 setup
     IMU imu_;
   };
 

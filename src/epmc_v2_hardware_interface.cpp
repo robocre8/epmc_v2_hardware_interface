@@ -30,9 +30,9 @@ void delay_ms(unsigned long milliseconds)
 
 namespace epmc_v2_hardware_interface
 {
-  hardware_interface::CallbackReturn EPMC_V2_HardwareInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams &info)
+  hardware_interface::CallbackReturn EPMC_V2_HardwareInterface::on_init(const hardware_interface::HardwareInfo &info)
   {
-    if ( hardware_interface::SystemInterface::on_init(info) != hardware_interface::CallbackReturn::SUCCESS )
+    if (hardware_interface::SystemInterface::on_init(info) != hardware_interface::CallbackReturn::SUCCESS)
     {
       return hardware_interface::CallbackReturn::ERROR;
     }
@@ -112,28 +112,33 @@ namespace epmc_v2_hardware_interface
   {
     std::vector<hardware_interface::StateInterface> state_interfaces;
 
-    if (config_.motor0_wheel_name != ""){
+    if (config_.motor0_wheel_name != "")
+    {
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor0_.name, hardware_interface::HW_IF_POSITION, &motor0_.angPos));
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor0_.name, hardware_interface::HW_IF_VELOCITY, &motor0_.angVel));
     }
 
-    if (config_.motor1_wheel_name != ""){
+    if (config_.motor1_wheel_name != "")
+    {
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor1_.name, hardware_interface::HW_IF_POSITION, &motor1_.angPos));
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor1_.name, hardware_interface::HW_IF_VELOCITY, &motor1_.angVel));
     }
 
-    if (config_.motor2_wheel_name != ""){
+    if (config_.motor2_wheel_name != "")
+    {
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor2_.name, hardware_interface::HW_IF_POSITION, &motor2_.angPos));
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor2_.name, hardware_interface::HW_IF_VELOCITY, &motor2_.angVel));
     }
 
-    if (config_.motor3_wheel_name != ""){
+    if (config_.motor3_wheel_name != "")
+    {
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor3_.name, hardware_interface::HW_IF_POSITION, &motor3_.angPos));
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor3_.name, hardware_interface::HW_IF_VELOCITY, &motor3_.angVel));
     }
 
     // Add IMU state interfaces
-    if (config_.imu_sensor_name != ""){
+    if (config_.imu_sensor_name != "")
+    {
       state_interfaces.emplace_back(imu_.name, "orientation.x", &imu_.qx);
       state_interfaces.emplace_back(imu_.name, "orientation.y", &imu_.qy);
       state_interfaces.emplace_back(imu_.name, "orientation.z", &imu_.qz);
@@ -155,19 +160,23 @@ namespace epmc_v2_hardware_interface
   {
     std::vector<hardware_interface::CommandInterface> command_interfaces;
 
-    if (config_.motor0_wheel_name != ""){
+    if (config_.motor0_wheel_name != "")
+    {
       command_interfaces.emplace_back(hardware_interface::CommandInterface(motor0_.name, hardware_interface::HW_IF_VELOCITY, &motor0_.cmdAngVel));
     }
 
-    if (config_.motor1_wheel_name != ""){
+    if (config_.motor1_wheel_name != "")
+    {
       command_interfaces.emplace_back(hardware_interface::CommandInterface(motor1_.name, hardware_interface::HW_IF_VELOCITY, &motor1_.cmdAngVel));
     }
 
-    if (config_.motor2_wheel_name != ""){
+    if (config_.motor2_wheel_name != "")
+    {
       command_interfaces.emplace_back(hardware_interface::CommandInterface(motor2_.name, hardware_interface::HW_IF_VELOCITY, &motor2_.cmdAngVel));
     }
 
-    if (config_.motor3_wheel_name != ""){
+    if (config_.motor3_wheel_name != "")
+    {
       command_interfaces.emplace_back(hardware_interface::CommandInterface(motor3_.name, hardware_interface::HW_IF_VELOCITY, &motor3_.cmdAngVel));
     }
 
@@ -195,10 +204,12 @@ namespace epmc_v2_hardware_interface
 
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "motor_cmd_timeout_ms: %d ms", (cmd_timeout));
 
-    if(imu_.use_imu == 1){
+    if (imu_.use_imu == 1)
+    {
       RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "MPU6050 IMU is available for use");
     }
-    else {
+    else
+    {
       RCLCPP_WARN(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "No IMU available for use");
     }
 
@@ -266,24 +277,30 @@ namespace epmc_v2_hardware_interface
 
       epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
 
-      if (config_.motor0_wheel_name != ""){
+      if (config_.motor0_wheel_name != "")
+      {
         motor0_.angPos = pos0;
         motor0_.angVel = v0;
       }
-      if (config_.motor1_wheel_name != ""){
+      if (config_.motor1_wheel_name != "")
+      {
         motor1_.angPos = pos1;
         motor1_.angVel = v1;
-      }  
-      if (config_.motor2_wheel_name != ""){
+      }
+      if (config_.motor2_wheel_name != "")
+      {
         motor2_.angPos = pos2;
         motor2_.angVel = v2;
-      }   
-      if (config_.motor3_wheel_name != ""){
+      }
+      if (config_.motor3_wheel_name != "")
+      {
         motor3_.angPos = pos3;
         motor3_.angVel = v3;
-      } 
-      if (config_.imu_sensor_name != ""){
-        if (imu_.use_imu == 1){
+      }
+      if (config_.imu_sensor_name != "")
+      {
+        if (imu_.use_imu == 1)
+        {
           float ax, ay, az;
           float gx, gy, gz;
           // epmcV2_.readAcc(ax, ay, az);
@@ -299,7 +316,6 @@ namespace epmc_v2_hardware_interface
           imu_.gz = gz;
         }
       }
-      
     }
     catch (...)
     {
@@ -316,17 +332,21 @@ namespace epmc_v2_hardware_interface
     }
 
     float v0, v1, v2, v3;
-    
-    if (config_.motor0_wheel_name != ""){
+
+    if (config_.motor0_wheel_name != "")
+    {
       v0 = (float)motor0_.cmdAngVel;
     }
-    if (config_.motor1_wheel_name != ""){
+    if (config_.motor1_wheel_name != "")
+    {
       v1 = (float)motor1_.cmdAngVel;
-    }  
-    if (config_.motor2_wheel_name != ""){
+    }
+    if (config_.motor2_wheel_name != "")
+    {
       v2 = (float)motor2_.cmdAngVel;
-    }   
-    if (config_.motor3_wheel_name != ""){
+    }
+    if (config_.motor3_wheel_name != "")
+    {
       v3 = (float)motor3_.cmdAngVel;
     }
 
