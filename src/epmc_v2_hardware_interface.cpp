@@ -30,7 +30,7 @@ void delay_ms(unsigned long milliseconds)
 
 namespace epmc_v2_hardware_interface
 {
-  hardware_interface::CallbackReturn EPMC_V2_HardwareInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams &info)
+  hardware_interface::CallbackReturn EPMC_V2_HardwareInterface::on_init(const hardware_interface::HardwareInfo &info)
   {
     if ( hardware_interface::SystemInterface::on_init(info) != hardware_interface::CallbackReturn::SUCCESS )
     {
