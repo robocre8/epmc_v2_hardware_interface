@@ -1,7 +1,6 @@
 controller_manager:
   ros__parameters:
-    # update_rate: 80  # Hz (with IMU)
-    update_rate: 100  # Hz (without IMU)
+    update_rate: 100  # Hz
     use_sim_time: false
 
     joint_state_broadcaster:
@@ -10,26 +9,6 @@ controller_manager:
     diff_drive_controller:
       type: diff_drive_controller/DiffDriveController
 
-    imu_broadcaster:
-      type: imu_sensor_broadcaster/IMUSensorBroadcaster
-
-imu_broadcaster:
-  ros__parameters:
-    sensor_name: mpu6050
-    frame_id: imu
-
-    # Optional covariance values
-    static_covariance_orientation: [0.0, 0.0, 0.0,
-                                    0.0, 0.0, 0.0,
-                                    0.0, 0.0, 0.0]
-
-    static_covariance_angular_velocity: [1e-5, 0.0, 0.0,
-                                          0.0, 1e-5, 0.0,
-                                          0.0, 0.0, 1e-5]
-
-    static_covariance_linear_acceleration: [0.001, 0.0, 0.0,
-                                            0.0, 0.001, 0.0,
-                                            0.0, 0.0, 0.001]
 
 diff_drive_controller:
   ros__parameters:
@@ -50,7 +29,7 @@ diff_drive_controller:
     left_wheel_radius_multiplier: 1.0
     right_wheel_radius_multiplier: 1.0
 
-    publish_rate: 40.0
+    publish_rate: 80.0
     odom_frame_id: odom
     base_frame_id: base_link
     pose_covariance_diagonal : [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]

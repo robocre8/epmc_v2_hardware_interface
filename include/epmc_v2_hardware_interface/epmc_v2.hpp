@@ -21,13 +21,7 @@ const uint8_t SET_PID_MODE = 0x15;
 const uint8_t GET_PID_MODE = 0x16;
 const uint8_t SET_CMD_TIMEOUT = 0x17;
 const uint8_t GET_CMD_TIMEOUT = 0x18;
-const uint8_t GET_USE_IMU = 0x1D;
-const uint8_t READ_ACC = 0x1E;
-const uint8_t READ_ACC_VAR = 0x21;
-const uint8_t READ_GYRO = 0x24;
-const uint8_t READ_GYRO_VAR = 0x27;
 const uint8_t READ_MOTOR_DATA = 0x2A;
-const uint8_t READ_IMU_DATA = 0x2B;
 //---------------------------------------------
 
 LibSerial::BaudRate convert_baud_rate(int baud_rate)
@@ -147,40 +141,9 @@ public:
     return (int)mode;
   }
 
-  int getUseIMU()
-  {
-    float mode = read_data1(GET_USE_IMU, 0);
-    return (int)mode;
-  }
-
-  void readAcc(float &x, float &y, float &z)
-  {
-    read_data3(READ_ACC, x, y, z);
-  }
-
-  void readAccVariance(float &x, float &y, float &z)
-  {
-    read_data3(READ_ACC_VAR, x, y, z);
-  }
-
-  void readGyro(float &x, float &y, float &z)
-  {
-    read_data3(READ_GYRO, x, y, z);
-  }
-
-  void readGyroVariance(float &x, float &y, float &z)
-  {
-    read_data3(READ_GYRO_VAR, x, y, z);
-  }
-
   void readMotorData(float &pos0, float& pos1, float &pos2, float &pos3, float &v0, float& v1, float &v2, float &v3)
   {
     read_data8(READ_MOTOR_DATA, pos0, pos1, pos2, pos3, v0, v1, v2, v3);
-  }
-
-  void readImuData(float &ax, float &ay, float &az, float &gx, float &gy, float &gz)
-  {
-    read_data6(READ_IMU_DATA, ax, ay, az, gx, gy, gz);
   }
 
 private:
