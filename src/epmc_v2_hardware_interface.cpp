@@ -43,7 +43,6 @@ namespace epmc_v2_hardware_interface
     config_.motor3_wheel_name = info_.hardware_parameters["motor3_wheel_name"];
     config_.port = info_.hardware_parameters["port"];
     config_.cmd_vel_timeout_ms = info_.hardware_parameters["cmd_vel_timeout_ms"];
-    config_.imu_sensor_name = info_.hardware_parameters["imu_sensor_name"];
 
     if (config_.motor0_wheel_name != "")
       motor0_.setup(config_.motor0_wheel_name);
@@ -53,8 +52,6 @@ namespace epmc_v2_hardware_interface
       motor2_.setup(config_.motor2_wheel_name);
     if (config_.motor3_wheel_name != "")
       motor3_.setup(config_.motor3_wheel_name);
-    if (config_.imu_sensor_name != "")
-      imu_.setup(config_.imu_sensor_name);
 
     for (const hardware_interface::ComponentInfo &joint : info_.joints)
     {
@@ -132,22 +129,6 @@ namespace epmc_v2_hardware_interface
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor3_.name, hardware_interface::HW_IF_VELOCITY, &motor3_.angVel));
     }
 
-    // Add IMU state interfaces
-    if (config_.imu_sensor_name != ""){
-      state_interfaces.emplace_back(imu_.name, "orientation.x", &imu_.qx);
-      state_interfaces.emplace_back(imu_.name, "orientation.y", &imu_.qy);
-      state_interfaces.emplace_back(imu_.name, "orientation.z", &imu_.qz);
-      state_interfaces.emplace_back(imu_.name, "orientation.w", &imu_.qw);
-
-      state_interfaces.emplace_back(imu_.name, "angular_velocity.x", &imu_.gx);
-      state_interfaces.emplace_back(imu_.name, "angular_velocity.y", &imu_.gy);
-      state_interfaces.emplace_back(imu_.name, "angular_velocity.z", &imu_.gz);
-
-      state_interfaces.emplace_back(imu_.name, "linear_acceleration.x", &imu_.ax);
-      state_interfaces.emplace_back(imu_.name, "linear_acceleration.y", &imu_.ay);
-      state_interfaces.emplace_back(imu_.name, "linear_acceleration.z", &imu_.az);
-    }
-
     return state_interfaces;
   }
 
@@ -191,16 +172,7 @@ namespace epmc_v2_hardware_interface
     epmcV2_.setCmdTimeout(cmd_timeout); // set motor command timeout
     cmd_timeout = epmcV2_.getCmdTimeout();
 
-    imu_.use_imu = epmcV2_.getUseIMU();
-
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "motor_cmd_timeout_ms: %d ms", (cmd_timeout));
-
-    if(imu_.use_imu == 1){
-      RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "MPU6050 IMU is available for use");
-    }
-    else {
-      RCLCPP_WARN(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "No IMU available for use");
-    }
 
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Successfully configured!");
 
@@ -228,8 +200,6 @@ namespace epmc_v2_hardware_interface
     }
 
     epmcV2_.writeSpeed(0.0, 0.0, 0.0, 0.0);
-
-    imu_.use_imu = epmcV2_.getUseIMU();
 
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Successfully Activated");
 
@@ -282,24 +252,6 @@ namespace epmc_v2_hardware_interface
         motor3_.angPos = pos3;
         motor3_.angVel = v3;
       } 
-      if (config_.imu_sensor_name != ""){
-        if (imu_.use_imu == 1){
-          float ax, ay, az;
-          float gx, gy, gz;
-          // epmcV2_.readAcc(ax, ay, az);
-          // epmcV2_.readGyro(gx, gy, gz);
-          epmcV2_.readImuData(ax, ay, az, gx, gy, gz);
-
-          imu_.ax = ax;
-          imu_.ay = ay;
-          imu_.az = az;
-
-          imu_.gx = gx;
-          imu_.gy = gy;
-          imu_.gz = gz;
-        }
-      }
-      
     }
     catch (...)
     {

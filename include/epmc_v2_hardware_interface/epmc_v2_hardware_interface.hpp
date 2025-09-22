@@ -33,7 +33,6 @@
 
 #include "epmc_v2_hardware_interface/epmc_v2.hpp"
 #include "epmc_v2_hardware_interface/motor.hpp"
-#include "epmc_v2_hardware_interface/imu.hpp"
 
 namespace epmc_v2_hardware_interface
 {
@@ -48,7 +47,6 @@ namespace epmc_v2_hardware_interface
       std::string motor3_wheel_name = "";
       std::string port = "";
       std::string cmd_vel_timeout_ms = "";
-      std::string imu_sensor_name = "";
     };
 
   public:
@@ -79,7 +77,6 @@ namespace epmc_v2_hardware_interface
     Motor motor1_;      // motor1 setup
     Motor motor2_;      // motor2 setup
     Motor motor3_;      // motor3 setup
-    IMU imu_;
   };
 
 } // namespace epmc_v2_hardware_interface

@@ -13,13 +13,12 @@
         <param name="motor2_wheel_name">rear_left_wheel_joint</param>
         <param name="motor3_wheel_name">rear_right_wheel_joint</param>
         <param name="cmd_vel_timeout_ms">2000</param>
-        <!-- <param name="imu_sensor_name">mpu6050</param> -->
       </hardware>
 
       <joint name="front_left_wheel_joint">
         <command_interface name="velocity">
-            <param name="min">-8.0</param>
-            <param name="max">8.0</param>
+            <param name="min">-10.0</param>
+            <param name="max">10.0</param>
         </command_interface>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
@@ -27,8 +26,8 @@
 
       <joint name="front_right_wheel_joint">
         <command_interface name="velocity">
-            <param name="min">-8.0</param>
-            <param name="max">8.0</param>
+            <param name="min">-10.0</param>
+            <param name="max">10.0</param>
         </command_interface>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
@@ -36,8 +35,8 @@
 
       <joint name="rear_left_wheel_joint">
         <command_interface name="velocity">
-            <param name="min">-8.0</param>
-            <param name="max">8.0</param>
+            <param name="min">-10.0</param>
+            <param name="max">10.0</param>
         </command_interface>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
@@ -45,8 +44,8 @@
 
       <joint name="rear_right_wheel_joint">
         <command_interface name="velocity">
-            <param name="min">-8.0</param>
-            <param name="max">8.0</param>
+            <param name="min">-10.0</param>
+            <param name="max">10.0</param>
         </command_interface>
         <state_interface name="position"/>
         <state_interface name="velocity"/>
