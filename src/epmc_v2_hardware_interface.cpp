@@ -166,6 +166,7 @@ namespace epmc_v2_hardware_interface
 
     delay_ms(2000);
 
+    epmcV2_.clearDataBuffer();
     epmcV2_.writeSpeed(0.0, 0.0, 0.0, 0.0);
 
     int cmd_timeout = std::stoi(config_.cmd_vel_timeout_ms.c_str());
@@ -199,6 +200,7 @@ namespace epmc_v2_hardware_interface
       return hardware_interface::CallbackReturn::ERROR;
     }
 
+    epmcV2_.clearDataBuffer();
     epmcV2_.writeSpeed(0.0, 0.0, 0.0, 0.0);
 
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Successfully Activated");
@@ -210,6 +212,7 @@ namespace epmc_v2_hardware_interface
   {
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Deactivating ...please wait...");
 
+    epmcV2_.clearDataBuffer();
     epmcV2_.writeSpeed(0.0, 0.0, 0.0, 0.0);
 
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Successfully Deactivated!");
