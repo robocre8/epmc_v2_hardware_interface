@@ -93,6 +93,9 @@ namespace epmc_v2_hardware_interface
     // Cached command from ros2_control
     float cmd_cache_[4] = {0};
 
+    float prev_pos0_, prev_pos1_, prev_pos2_, prev_pos3_;
+    float current_pos0_, current_pos1_, current_pos2_, current_pos3_;
+
     void serialReadWriteLoop();  // Background worker
   };
 
