@@ -228,25 +228,35 @@ namespace epmc_v2_hardware_interface
     return hardware_interface::CallbackReturn::SUCCESS;
   }
 
-  hardware_interface::return_type EPMC_V2_HardwareInterface::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+  hardware_interface::return_type EPMC_V2_HardwareInterface::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
   {
     std::lock_guard<std::mutex> lock(data_mutex_);
 
+    float dt = period.seconds();
+
     if (config_.motor0_wheel_name != "") {
-      motor0_.angPos = pos_cache_[0];
-      motor0_.angVel = vel_cache_[0];
+      current_pos0_ = pos_cache_[0];
+      motor0_.angPos = current_pos0_;
+      motor0_.angVel = (current_pos0_ - prev_pos0_)/dt;
+      prev_pos0_ = current_pos0_;
     }
     if (config_.motor1_wheel_name != "") {
-      motor1_.angPos = pos_cache_[1];
-      motor1_.angVel = vel_cache_[1];
+      current_pos1_ = pos_cache_[1];
+      motor1_.angPos = current_pos1_;
+      motor1_.angVel = (current_pos1_ - prev_pos1_)/dt;
+      prev_pos1_ = current_pos1_;
     }
     if (config_.motor2_wheel_name != "") {
-      motor2_.angPos = pos_cache_[2];
-      motor2_.angVel = vel_cache_[2];
+      current_pos2_ = pos_cache_[2];
+      motor2_.angPos = current_pos2_;
+      motor2_.angVel = (current_pos2_ - prev_pos2_)/dt;
+      prev_pos2_ = current_pos2_;
     }
     if (config_.motor3_wheel_name != "") {
-      motor3_.angPos = pos_cache_[3];
-      motor3_.angVel = vel_cache_[3];
+      current_pos3_ = pos_cache_[3];
+      motor3_.angPos = current_pos3_;
+      motor3_.angVel = (current_pos3_ - prev_pos3_)/dt;
+      prev_pos3_ = current_pos3_;
     }
 
     return hardware_interface::return_type::OK;
@@ -269,15 +279,16 @@ namespace epmc_v2_hardware_interface
     while (running_) {
       try {
         float pos0, pos1, pos2, pos3;
-        float v0, v1, v2, v3;
+        // float v0, v1, v2, v3;
 
         // Read latest state from hardware
-        epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
+        // epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
+        epmcV2_.readPos(pos0, pos1, pos2, pos3);
 
         {
           std::lock_guard<std::mutex> lock(data_mutex_);
           pos_cache_[0] = pos0; pos_cache_[1] = pos1; pos_cache_[2] = pos2; pos_cache_[3] = pos3;
-          vel_cache_[0] = v0;   vel_cache_[1] = v1;   vel_cache_[2] = v2;   vel_cache_[3] = v3;
+          // vel_cache_[0] = v0;   vel_cache_[1] = v1;   vel_cache_[2] = v2;   vel_cache_[3] = v3;
 
           // Write latest commands
           epmcV2_.writeSpeed(cmd_cache_[0], cmd_cache_[1], cmd_cache_[2], cmd_cache_[3]);
