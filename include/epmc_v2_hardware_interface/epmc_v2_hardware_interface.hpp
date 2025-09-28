@@ -18,6 +18,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <thread>
+#include <atomic>
+#include <mutex>
 
 #include "hardware_interface/handle.hpp"
 #include "hardware_interface/hardware_info.hpp"
@@ -77,6 +80,20 @@ namespace epmc_v2_hardware_interface
     Motor motor1_;      // motor1 setup
     Motor motor2_;      // motor2 setup
     Motor motor3_;      // motor3 setup
+
+    // Background thread for non-blocking serial I/O
+    std::thread io_thread_;
+    std::atomic<bool> running_{false};
+    std::mutex data_mutex_;
+
+    // Cached state from motors
+    float pos_cache_[4] = {0};
+    float vel_cache_[4] = {0};
+
+    // Cached command from ros2_control
+    float cmd_cache_[4] = {0};
+
+    void serialReadWriteLoop();  // Background worker
   };
 
 } // namespace epmc_v2_hardware_interface

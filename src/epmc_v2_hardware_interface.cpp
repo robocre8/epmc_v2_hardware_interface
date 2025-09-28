@@ -203,6 +203,9 @@ namespace epmc_v2_hardware_interface
     epmcV2_.clearDataBuffer();
     epmcV2_.writeSpeed(0.0, 0.0, 0.0, 0.0);
 
+    running_ = true;
+    io_thread_ = std::thread(&EPMC_V2_HardwareInterface::serialReadWriteLoop, this);
+
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Successfully Activated");
 
     return hardware_interface::CallbackReturn::SUCCESS;
@@ -211,6 +214,11 @@ namespace epmc_v2_hardware_interface
   hardware_interface::CallbackReturn EPMC_V2_HardwareInterface::on_deactivate(const rclcpp_lifecycle::State &)
   {
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Deactivating ...please wait...");
+
+    running_ = false;
+    if (io_thread_.joinable()) {
+      io_thread_.join();
+    }
 
     epmcV2_.clearDataBuffer();
     epmcV2_.writeSpeed(0.0, 0.0, 0.0, 0.0);
@@ -222,42 +230,23 @@ namespace epmc_v2_hardware_interface
 
   hardware_interface::return_type EPMC_V2_HardwareInterface::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
   {
-    // vel = angdistchange/period.seconds();
-    if (!epmcV2_.connected())
-    {
-      return hardware_interface::return_type::ERROR;
+    std::lock_guard<std::mutex> lock(data_mutex_);
+
+    if (config_.motor0_wheel_name != "") {
+      motor0_.angPos = pos_cache_[0];
+      motor0_.angVel = vel_cache_[0];
     }
-
-    try
-    {
-      // read wheel pos and velocity data
-      float pos0, pos1, pos2, pos3;
-      float v0, v1, v2, v3;
-
-      // epmcV2_.readPos(pos0, pos1, pos2, pos3);
-      // epmcV2_.readVel(v0, v1, v2, v3);
-
-      epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
-
-      if (config_.motor0_wheel_name != ""){
-        motor0_.angPos = pos0;
-        motor0_.angVel = v0;
-      }
-      if (config_.motor1_wheel_name != ""){
-        motor1_.angPos = pos1;
-        motor1_.angVel = v1;
-      }  
-      if (config_.motor2_wheel_name != ""){
-        motor2_.angPos = pos2;
-        motor2_.angVel = v2;
-      }   
-      if (config_.motor3_wheel_name != ""){
-        motor3_.angPos = pos3;
-        motor3_.angVel = v3;
-      } 
+    if (config_.motor1_wheel_name != "") {
+      motor1_.angPos = pos_cache_[1];
+      motor1_.angVel = vel_cache_[1];
     }
-    catch (...)
-    {
+    if (config_.motor2_wheel_name != "") {
+      motor2_.angPos = pos_cache_[2];
+      motor2_.angVel = vel_cache_[2];
+    }
+    if (config_.motor3_wheel_name != "") {
+      motor3_.angPos = pos_cache_[3];
+      motor3_.angVel = vel_cache_[3];
     }
 
     return hardware_interface::return_type::OK;
@@ -265,29 +254,41 @@ namespace epmc_v2_hardware_interface
 
   hardware_interface::return_type epmc_v2_hardware_interface ::EPMC_V2_HardwareInterface::write(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
   {
-    if (!epmcV2_.connected())
-    {
-      return hardware_interface::return_type::ERROR;
-    }
+    std::lock_guard<std::mutex> lock(data_mutex_);
 
-    float v0, v1, v2, v3;
-    
-    if (config_.motor0_wheel_name != ""){
-      v0 = (float)motor0_.cmdAngVel;
-    }
-    if (config_.motor1_wheel_name != ""){
-      v1 = (float)motor1_.cmdAngVel;
-    }  
-    if (config_.motor2_wheel_name != ""){
-      v2 = (float)motor2_.cmdAngVel;
-    }   
-    if (config_.motor3_wheel_name != ""){
-      v3 = (float)motor3_.cmdAngVel;
-    }
-
-    epmcV2_.writeSpeed(v0, v1, v2, v3);
+    if (config_.motor0_wheel_name != "") cmd_cache_[0] = motor0_.cmdAngVel;
+    if (config_.motor1_wheel_name != "") cmd_cache_[1] = motor1_.cmdAngVel;
+    if (config_.motor2_wheel_name != "") cmd_cache_[2] = motor2_.cmdAngVel;
+    if (config_.motor3_wheel_name != "") cmd_cache_[3] = motor3_.cmdAngVel;
 
     return hardware_interface::return_type::OK;
+  }
+
+  void EPMC_V2_HardwareInterface::serialReadWriteLoop()
+  {
+    while (running_) {
+      try {
+        float pos0, pos1, pos2, pos3;
+        float v0, v1, v2, v3;
+
+        // Read latest state from hardware
+        epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
+
+        {
+          std::lock_guard<std::mutex> lock(data_mutex_);
+          pos_cache_[0] = pos0; pos_cache_[1] = pos1; pos_cache_[2] = pos2; pos_cache_[3] = pos3;
+          vel_cache_[0] = v0;   vel_cache_[1] = v1;   vel_cache_[2] = v2;   vel_cache_[3] = v3;
+
+          // Write latest commands
+          epmcV2_.writeSpeed(cmd_cache_[0], cmd_cache_[1], cmd_cache_[2], cmd_cache_[3]);
+        }
+      }
+      catch (...) {
+        // Ignore read/write errors
+      }
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(10)); // ~100 Hz loop
+    }
   }
 
 } // namespace epmc_v2_hardware_interface
