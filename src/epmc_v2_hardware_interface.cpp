@@ -23,6 +23,9 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include "tf2/LinearMath/Matrix3x3.h"
+#include "tf2/LinearMath/Quaternion.h"
+
 void delay_ms(unsigned long milliseconds)
 {
   usleep(milliseconds * 1000);
@@ -43,6 +46,7 @@ namespace epmc_v2_hardware_interface
     config_.motor3_wheel_name = info_.hardware_parameters["motor3_wheel_name"];
     config_.port = info_.hardware_parameters["port"];
     config_.cmd_vel_timeout_ms = info_.hardware_parameters["cmd_vel_timeout_ms"];
+    config_.imu_sensor_name = info_.hardware_parameters["imu_sensor_name"];
 
     if (config_.motor0_wheel_name != "")
       motor0_.setup(config_.motor0_wheel_name);
@@ -52,6 +56,8 @@ namespace epmc_v2_hardware_interface
       motor2_.setup(config_.motor2_wheel_name);
     if (config_.motor3_wheel_name != "")
       motor3_.setup(config_.motor3_wheel_name);
+    if (config_.imu_sensor_name != "")
+      imu_.setup(config_.imu_sensor_name);
 
     for (const hardware_interface::ComponentInfo &joint : info_.joints)
     {
@@ -129,6 +135,22 @@ namespace epmc_v2_hardware_interface
       state_interfaces.emplace_back(hardware_interface::StateInterface(motor3_.name, hardware_interface::HW_IF_VELOCITY, &motor3_.angVel));
     }
 
+    // Add IMU state interfaces
+    if (config_.imu_sensor_name != ""){
+      state_interfaces.emplace_back(imu_.name, "orientation.x", &imu_.qx);
+      state_interfaces.emplace_back(imu_.name, "orientation.y", &imu_.qy);
+      state_interfaces.emplace_back(imu_.name, "orientation.z", &imu_.qz);
+      state_interfaces.emplace_back(imu_.name, "orientation.w", &imu_.qw);
+
+      state_interfaces.emplace_back(imu_.name, "angular_velocity.x", &imu_.gx);
+      state_interfaces.emplace_back(imu_.name, "angular_velocity.y", &imu_.gy);
+      state_interfaces.emplace_back(imu_.name, "angular_velocity.z", &imu_.gz);
+
+      state_interfaces.emplace_back(imu_.name, "linear_acceleration.x", &imu_.ax);
+      state_interfaces.emplace_back(imu_.name, "linear_acceleration.y", &imu_.ay);
+      state_interfaces.emplace_back(imu_.name, "linear_acceleration.z", &imu_.az);
+    }
+
     return state_interfaces;
   }
 
@@ -173,7 +195,16 @@ namespace epmc_v2_hardware_interface
     epmcV2_.setCmdTimeout(cmd_timeout); // set motor command timeout
     cmd_timeout = epmcV2_.getCmdTimeout();
 
+    imu_.use_imu = epmcV2_.getUseIMU();
+
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "motor_cmd_timeout_ms: %d ms", (cmd_timeout));
+
+    if(imu_.use_imu == 1){
+      RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "MPU6050 IMU is available for use");
+    }
+    else {
+      RCLCPP_WARN(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "No IMU available for use");
+    }
 
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Successfully configured!");
 
@@ -202,6 +233,7 @@ namespace epmc_v2_hardware_interface
 
     epmcV2_.clearDataBuffer();
     epmcV2_.writeSpeed(0.0, 0.0, 0.0, 0.0);
+    imu_.use_imu = epmcV2_.getUseIMU();
 
     running_ = true;
     io_thread_ = std::thread(&EPMC_V2_HardwareInterface::serialReadWriteLoop, this);
@@ -228,35 +260,41 @@ namespace epmc_v2_hardware_interface
     return hardware_interface::CallbackReturn::SUCCESS;
   }
 
-  hardware_interface::return_type EPMC_V2_HardwareInterface::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
+  hardware_interface::return_type EPMC_V2_HardwareInterface::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
   {
     std::lock_guard<std::mutex> lock(data_mutex_);
 
-    float dt = period.seconds();
+    if (config_.motor0_wheel_name != ""){
+      motor0_.angPos = pos_cache_[0];
+      motor0_.angVel = vel_cache_[0];
+    }
+    if (config_.motor1_wheel_name != ""){
+      motor1_.angPos = pos_cache_[1];
+      motor1_.angVel = vel_cache_[1];
+    }  
+    if (config_.motor2_wheel_name != ""){
+      motor2_.angPos = pos_cache_[2];
+      motor2_.angVel = vel_cache_[2];
+    }   
+    if (config_.motor3_wheel_name != ""){
+      motor3_.angPos = pos_cache_[3];
+      motor3_.angVel = vel_cache_[3];
+    } 
+    if (config_.imu_sensor_name != ""){
+      if (imu_.use_imu == 1){
+        imu_.qw = quat_cache_[0];
+        imu_.qx = quat_cache_[1];
+        imu_.qy = quat_cache_[2];
+        imu_.qz = quat_cache_[3];
 
-    if (config_.motor0_wheel_name != "") {
-      current_pos0_ = pos_cache_[0];
-      motor0_.angPos = current_pos0_;
-      motor0_.angVel = (current_pos0_ - prev_pos0_)/dt;
-      prev_pos0_ = current_pos0_;
-    }
-    if (config_.motor1_wheel_name != "") {
-      current_pos1_ = pos_cache_[1];
-      motor1_.angPos = current_pos1_;
-      motor1_.angVel = (current_pos1_ - prev_pos1_)/dt;
-      prev_pos1_ = current_pos1_;
-    }
-    if (config_.motor2_wheel_name != "") {
-      current_pos2_ = pos_cache_[2];
-      motor2_.angPos = current_pos2_;
-      motor2_.angVel = (current_pos2_ - prev_pos2_)/dt;
-      prev_pos2_ = current_pos2_;
-    }
-    if (config_.motor3_wheel_name != "") {
-      current_pos3_ = pos_cache_[3];
-      motor3_.angPos = current_pos3_;
-      motor3_.angVel = (current_pos3_ - prev_pos3_)/dt;
-      prev_pos3_ = current_pos3_;
+        imu_.ax = acc_cache_[0];
+        imu_.ay = acc_cache_[1];
+        imu_.az = acc_cache_[2];
+
+        imu_.gx = gyro_cache_[0];
+        imu_.gy = gyro_cache_[1];
+        imu_.gz = gyro_cache_[2];
+      }
     }
 
     return hardware_interface::return_type::OK;
@@ -278,17 +316,27 @@ namespace epmc_v2_hardware_interface
   {
     while (running_) {
       try {
-        float pos0, pos1, pos2, pos3;
-        // float v0, v1, v2, v3;
+        float pos0, pos1, pos2, pos3, v0, v1, v2, v3;
+        float r, p, y, ax, ay, az, gx, gy, gz;
+        tf2::Quaternion q;
 
         // Read latest state from hardware
-        // epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
-        epmcV2_.readPos(pos0, pos1, pos2, pos3);
+        epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
+        if (imu_.use_imu == 1){
+          epmcV2_.readImuData(r, p, y, ax, ay, az, gx, gy, gz);
+          q.setRPY(r, p, y);
+        }
 
         {
           std::lock_guard<std::mutex> lock(data_mutex_);
           pos_cache_[0] = pos0; pos_cache_[1] = pos1; pos_cache_[2] = pos2; pos_cache_[3] = pos3;
-          // vel_cache_[0] = v0;   vel_cache_[1] = v1;   vel_cache_[2] = v2;   vel_cache_[3] = v3;
+          vel_cache_[0] = v0;   vel_cache_[1] = v1;   vel_cache_[2] = v2;   vel_cache_[3] = v3;
+
+          if (imu_.use_imu == 1){
+            quat_cache_[0] = q.getW(); quat_cache_[1] = q.getX(); quat_cache_[2] = q.getY(), quat_cache_[3] = q.getZ();
+            acc_cache_[0] = ax; acc_cache_[1] = ay; acc_cache_[2] = az;
+            gyro_cache_[0] = gx; gyro_cache_[1] = gy; gyro_cache_[2] = gz;
+          }
 
           // Write latest commands
           epmcV2_.writeSpeed(cmd_cache_[0], cmd_cache_[1], cmd_cache_[2], cmd_cache_[3]);
@@ -298,7 +346,7 @@ namespace epmc_v2_hardware_interface
         // Ignore read/write errors
       }
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(10)); // ~100 Hz loop
+      std::this_thread::sleep_for(std::chrono::milliseconds(15)); // ~67 Hz loop
     }
   }
 
