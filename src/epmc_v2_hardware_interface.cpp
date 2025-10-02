@@ -33,6 +33,10 @@ void delay_ms(unsigned long milliseconds)
 
 namespace epmc_v2_hardware_interface
 {
+  auto epmcReadWriteTime = std::chrono::system_clock::now();
+  std::chrono::duration<double> epmcReadWriteDuration;
+  float epmcReadWriteTimeInterval = 0.01; // 100Hz
+
   hardware_interface::CallbackReturn EPMC_V2_HardwareInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams &info)
   {
     if ( hardware_interface::SystemInterface::on_init(info) != hardware_interface::CallbackReturn::SUCCESS )
@@ -237,6 +241,7 @@ namespace epmc_v2_hardware_interface
 
     running_ = true;
     io_thread_ = std::thread(&EPMC_V2_HardwareInterface::serialReadWriteLoop, this);
+    epmcReadWriteTime = std::chrono::system_clock::now();
 
     RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "Successfully Activated");
 
@@ -315,38 +320,44 @@ namespace epmc_v2_hardware_interface
   void EPMC_V2_HardwareInterface::serialReadWriteLoop()
   {
     while (running_) {
-      try {
-        float pos0, pos1, pos2, pos3, v0, v1, v2, v3;
-        float r, p, y, ax, ay, az, gx, gy, gz;
-        tf2::Quaternion q;
+      epmcReadWriteDuration = (std::chrono::system_clock::now() - epmcReadWriteTime);
+      if (epmcReadWriteDuration.count() > epmcReadWriteTimeInterval)
+      {
+        try {
+          float pos0, pos1, pos2, pos3, v0, v1, v2, v3;
+          float r, p, y, ax, ay, az, gx, gy, gz;
+          tf2::Quaternion q;
 
-        // Read latest state from hardware
-        epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
-        if (imu_.use_imu == 1){
-          epmcV2_.readImuData(r, p, y, ax, ay, az, gx, gy, gz);
-          q.setRPY(r, p, y);
-        }
-
-        {
-          std::lock_guard<std::mutex> lock(data_mutex_);
-          pos_cache_[0] = pos0; pos_cache_[1] = pos1; pos_cache_[2] = pos2; pos_cache_[3] = pos3;
-          vel_cache_[0] = v0;   vel_cache_[1] = v1;   vel_cache_[2] = v2;   vel_cache_[3] = v3;
-
+          // Read latest state from hardware
+          epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
           if (imu_.use_imu == 1){
-            quat_cache_[0] = q.getW(); quat_cache_[1] = q.getX(); quat_cache_[2] = q.getY(), quat_cache_[3] = q.getZ();
-            acc_cache_[0] = ax; acc_cache_[1] = ay; acc_cache_[2] = az;
-            gyro_cache_[0] = gx; gyro_cache_[1] = gy; gyro_cache_[2] = gz;
+            epmcV2_.readImuData(r, p, y, ax, ay, az, gx, gy, gz);
+            q.setRPY(r, p, y);
           }
 
-          // Write latest commands
-          epmcV2_.writeSpeed(cmd_cache_[0], cmd_cache_[1], cmd_cache_[2], cmd_cache_[3]);
-        }
-      }
-      catch (...) {
-        // Ignore read/write errors
-      }
+          {
+            std::lock_guard<std::mutex> lock(data_mutex_);
+            pos_cache_[0] = pos0; pos_cache_[1] = pos1; pos_cache_[2] = pos2; pos_cache_[3] = pos3;
+            vel_cache_[0] = v0;   vel_cache_[1] = v1;   vel_cache_[2] = v2;   vel_cache_[3] = v3;
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(15)); // ~67 Hz loop
+            if (imu_.use_imu == 1){
+              quat_cache_[0] = q.getW(); quat_cache_[1] = q.getX(); quat_cache_[2] = q.getY(), quat_cache_[3] = q.getZ();
+              acc_cache_[0] = ax; acc_cache_[1] = ay; acc_cache_[2] = az;
+              gyro_cache_[0] = gx; gyro_cache_[1] = gy; gyro_cache_[2] = gz;
+            }
+
+            // Write latest commands
+            epmcV2_.writeSpeed(cmd_cache_[0], cmd_cache_[1], cmd_cache_[2], cmd_cache_[3]);
+          }
+        }
+        catch (...) {
+          // Ignore read/write errors
+        }
+
+        epmcReadWriteTime = std::chrono::system_clock::now();
+      }
+      
+      // std::this_thread::sleep_for(std::chrono::milliseconds(12)); // ~80 Hz loop
     }
   }
 
