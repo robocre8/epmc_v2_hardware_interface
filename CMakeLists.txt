@@ -11,8 +11,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   pluginlib
   rclcpp
   rclcpp_lifecycle
-  tf2
-  tf2_ros
 )
 
 # find dependencies

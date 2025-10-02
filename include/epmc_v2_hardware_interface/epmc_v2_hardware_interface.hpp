@@ -36,7 +36,6 @@
 
 #include "epmc_v2_hardware_interface/epmc_v2.hpp"
 #include "epmc_v2_hardware_interface/motor.hpp"
-#include "epmc_v2_hardware_interface/imu.hpp"
 
 namespace epmc_v2_hardware_interface
 {
@@ -82,7 +81,6 @@ namespace epmc_v2_hardware_interface
     Motor motor1_;      // motor1 setup
     Motor motor2_;      // motor2 setup
     Motor motor3_;      // motor3 setup
-    IMU imu_;
 
     // Background thread for non-blocking serial I/O
     std::thread io_thread_;
@@ -95,11 +93,6 @@ namespace epmc_v2_hardware_interface
 
     // Cached command from ros2_control
     float cmd_cache_[4] = {0};
-
-    // Cached state from imu
-    float quat_cache_[4] = {0};
-    float acc_cache_[3] = {0};
-    float gyro_cache_[3] = {0};
 
     void serialReadWriteLoop();  // Background worker
   };

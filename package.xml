@@ -16,8 +16,6 @@
   <depend>rclcpp_lifecycle</depend>
   <depend>lifecycle_msgs</depend>
   <depend>libserial-dev</depend>
-  <depend>tf2</depend>
-  <depend>tf2_ros</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
