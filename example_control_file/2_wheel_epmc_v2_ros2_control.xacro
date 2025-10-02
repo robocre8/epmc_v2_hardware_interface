@@ -8,7 +8,7 @@
         <param name="port">/dev/ttyUSB0</param>
         <param name="motor0_wheel_name">left_wheel_joint</param>
         <param name="motor1_wheel_name">right_wheel_joint</param>
-        <param name="cmd_vel_timeout_ms">2000</param>
+        <param name="cmd_vel_timeout_ms">6000</param>
       </hardware>
 
       <joint name="left_wheel_joint">

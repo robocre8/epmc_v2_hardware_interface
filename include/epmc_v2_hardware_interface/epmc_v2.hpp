@@ -22,7 +22,7 @@ const uint8_t GET_PID_MODE = 0x16;
 const uint8_t SET_CMD_TIMEOUT = 0x17;
 const uint8_t GET_CMD_TIMEOUT = 0x18;
 const uint8_t READ_MOTOR_DATA = 0x2A;
-const uint8_t CLEAR_DATA_BUFFER = 0x2B;
+const uint8_t CLEAR_DATA_BUFFER = 0x2C;
 //---------------------------------------------
 
 LibSerial::BaudRate convert_baud_rate(int baud_rate)
