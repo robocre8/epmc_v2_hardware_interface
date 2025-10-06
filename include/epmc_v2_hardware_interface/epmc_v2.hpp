@@ -106,16 +106,14 @@ public:
     read_data4(READ_UVEL, v0, v1, v2, v3);
   }
 
-  int writePWM(int pwm0, int pwm1, int pwm2, int pwm3)
+  void writePWM(int pwm0, int pwm1, int pwm2, int pwm3)
   {
-    float res = write_data4(WRITE_PWM, (float)pwm0, (float)pwm1, (float)pwm2, (float)pwm3);
-    return (int)res;
+    write_data4(WRITE_PWM, (float)pwm0, (float)pwm1, (float)pwm2, (float)pwm3);
   }
 
-  int writeSpeed(float v0, float v1, float v2, float v3)
+  void writeSpeed(float v0, float v1, float v2, float v3)
   {
-    float res = write_data4(WRITE_VEL, v0, v1, v2, v3);
-    return (int)res;
+    write_data4(WRITE_VEL, v0, v1, v2, v3);
   }
 
   int setCmdTimeout(int timeout_ms)
@@ -249,14 +247,13 @@ private:
       return read_packet1();
   }
 
-  float write_data4(uint8_t cmd, float a, float b, float c, float d) {
+  void write_data4(uint8_t cmd, float a, float b, float c, float d) {
       std::vector<uint8_t> payload(4 * sizeof(float));
       std::memcpy(&payload[0],  &a, 4);
       std::memcpy(&payload[4],  &b, 4);
       std::memcpy(&payload[8],  &c, 4);
       std::memcpy(&payload[12], &d, 4);
       send_packet_with_payload(cmd, payload);
-      return read_packet1();
   }
 
   void read_data3(uint8_t cmd, float &a, float &b, float &c) {
