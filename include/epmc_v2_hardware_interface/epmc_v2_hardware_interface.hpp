@@ -88,11 +88,21 @@ namespace epmc_v2_hardware_interface
     std::mutex data_mutex_;
 
     // Cached state from motors
-    float pos_cache_[4] = {0};
-    float vel_cache_[4] = {0};
+    float pos0_cache_ = 0.0;
+    float pos1_cache_ = 0.0;
+    float pos2_cache_ = 0.0;
+    float pos3_cache_ = 0.0;
+    
+    float vel0_cache_ = 0.0;
+    float vel1_cache_ = 0.0;
+    float vel2_cache_ = 0.0;
+    float vel3_cache_ = 0.0;
 
     // Cached command from ros2_control
-    float cmd_cache_[4] = {0};
+    float cmd0_cache_ = 0.0;
+    float cmd1_cache_ = 0.0;
+    float cmd2_cache_ = 0.0;
+    float cmd3_cache_ = 0.0;
 
     void serialReadWriteLoop();  // Background worker
   };

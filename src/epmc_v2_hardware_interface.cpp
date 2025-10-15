@@ -119,7 +119,11 @@ namespace epmc_v2_hardware_interface
     }
     epmcV2_.connect(config_.port);
 
-    delay_ms(2000);
+    for (int i = 1; i <= 4; i += 1)
+    { // wait for the smc to fully setup
+      delay_ms(1000);
+      RCLCPP_INFO(rclcpp::get_logger("EPMC_V2_HardwareInterface"), "configuring controller: %d sec", (i));
+    }
 
     epmcV2_.clearDataBuffer();
     epmcV2_.writeSpeed(0.0, 0.0, 0.0, 0.0);
@@ -189,20 +193,20 @@ namespace epmc_v2_hardware_interface
     std::lock_guard<std::mutex> lock(data_mutex_);
 
     if (config_.motor0_wheel_name != ""){
-      motor0_.angPos = pos_cache_[0];
-      motor0_.angVel = vel_cache_[0];
+      motor0_.angPos = pos0_cache_;
+      motor0_.angVel = vel0_cache_;
     }
     if (config_.motor1_wheel_name != ""){
-      motor1_.angPos = pos_cache_[1];
-      motor1_.angVel = vel_cache_[1];
+      motor1_.angPos = pos1_cache_;
+      motor1_.angVel = vel1_cache_;
     }  
     if (config_.motor2_wheel_name != ""){
-      motor2_.angPos = pos_cache_[2];
-      motor2_.angVel = vel_cache_[2];
+      motor2_.angPos = pos2_cache_;
+      motor2_.angVel = vel2_cache_;
     }   
     if (config_.motor3_wheel_name != ""){
-      motor3_.angPos = pos_cache_[3];
-      motor3_.angVel = vel_cache_[3];
+      motor3_.angPos = pos3_cache_;
+      motor3_.angVel = vel3_cache_;
     } 
 
     return hardware_interface::return_type::OK;
@@ -212,10 +216,10 @@ namespace epmc_v2_hardware_interface
   {
     std::lock_guard<std::mutex> lock(data_mutex_);
 
-    if (config_.motor0_wheel_name != "") cmd_cache_[0] = motor0_.cmdAngVel;
-    if (config_.motor1_wheel_name != "") cmd_cache_[1] = motor1_.cmdAngVel;
-    if (config_.motor2_wheel_name != "") cmd_cache_[2] = motor2_.cmdAngVel;
-    if (config_.motor3_wheel_name != "") cmd_cache_[3] = motor3_.cmdAngVel;
+    if (config_.motor0_wheel_name != "") cmd0_cache_ = motor0_.cmdAngVel;
+    if (config_.motor1_wheel_name != "") cmd1_cache_ = motor1_.cmdAngVel;
+    if (config_.motor2_wheel_name != "") cmd2_cache_ = motor2_.cmdAngVel;
+    if (config_.motor3_wheel_name != "") cmd3_cache_ = motor3_.cmdAngVel;
 
     return hardware_interface::return_type::OK;
   }
@@ -229,14 +233,16 @@ namespace epmc_v2_hardware_interface
         try {
           float pos0, pos1, pos2, pos3, v0, v1, v2, v3;
           // Read latest state from hardware
-          epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
+          bool success = epmcV2_.readMotorData(pos0, pos1, pos2, pos3, v0, v1, v2, v3);
           {
             std::lock_guard<std::mutex> lock(data_mutex_);
-            pos_cache_[0] = pos0; pos_cache_[1] = pos1; pos_cache_[2] = pos2; pos_cache_[3] = pos3;
-            vel_cache_[0] = v0;   vel_cache_[1] = v1;   vel_cache_[2] = v2;   vel_cache_[3] = v3;
+            if (success){
+              pos0_cache_ = pos0; pos1_cache_ = pos1; pos2_cache_ = pos2; pos3_cache_ = pos3;
+              vel0_cache_ = v0;   vel1_cache_ = v1;   vel2_cache_ = v2;   vel3_cache_ = v3;
+            }
 
             // Write latest commands
-            epmcV2_.writeSpeed(cmd_cache_[0], cmd_cache_[1], cmd_cache_[2], cmd_cache_[3]);
+            epmcV2_.writeSpeed(cmd0_cache_, cmd1_cache_, cmd2_cache_, cmd3_cache_);
           }
         }
         catch (...) {
